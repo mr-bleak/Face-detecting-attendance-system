@@ -1,0 +1,47 @@
+{
+  "name": "smartface-attendance-gis",
+  "version": "1.0.0",
+  "description": "Enterprise Edge-Biometric Attendance & Cryptographic Defense Engine with Zero-Server Latency MediaPipe WASM and AES-256-GCM + HMAC-SHA256 non-repudiation.",
+  "private": true,
+  "keywords": [
+    "biometrics",
+    "face-detection",
+    "mediapipe-wasm",
+    "edge-ai",
+    "gis",
+    "attendance-system",
+    "nextjs16",
+    "react19",
+    "cryptography",
+    "aes-256-gcm",
+    "hmac-sha256",
+    "supabase",
+    "glassmorphism"
+  ],
+  "scripts": {
+    "dev": "node ./node_modules/next/dist/bin/next dev",
+    "build": "node ./node_modules/next/dist/bin/next build",
+    "start": "node ./node_modules/next/dist/bin/next start",
+    "lint": "node ./node_modules/next/dist/bin/next lint"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.1.1",
+    "@supabase/supabase-js": "^2.118.0",
+    "@types/canvas-confetti": "^1.9.0",
+    "canvas-confetti": "^1.9.4",
+    "lucide-react": "^1.57.0",
+    "next": "16.4.1",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.4.1",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
