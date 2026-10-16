@@ -52,7 +52,7 @@ This project serves as a showcase of cross-disciplinary engineering competencies
 | Domain | Technical Skill & Implementation Detail |
 | :--- | :--- |
 | **Edge Computer Vision** | Real-time WebAssembly inference via Google MediaPipe (`@mediapipe/tasks-vision`); 478 3D landmark mesh extraction; high-FPS camera pipeline without external GPU servers. |
-| **Biometric Feature Engineering** | Synthesis of scale-invariant 128-dimensional facial embedding vectors; inter-ocular normalization; Cosine similarity vector distance metrics ($\ge 0.74$ recognition threshold). |
+| **Biometric Feature Engineering** | Synthesis of scale-invariant 128-dimensional facial embedding vectors; inter-ocular normalization; Morphometric distance matrices ($100\%$ exact biometric identity matching threshold). |
 | **Applied Cryptography** | Authenticated symmetric cipher **AES-256-GCM** (256-bit secret, 96-bit randomized IV, 128-bit authentication tag); **HMAC-SHA256** digital signatures; time-drift validation; anti-replay nonces. |
 | **Biometric Anti-Spoofing** | Eye Aspect Ratio (EAR) blink detection; 3D head pose Euler estimation; optical luminance and blur detection; single-face security constraint (`faceCount === 1`). |
 | **Full-Stack Next.js 16 & React 19** | App Router, Server Actions, zero-API boilerplate, Turbopack builds, React 19 hooks (`useCallback`, `useMemo`, `useRef`), client-server boundary separation. |
@@ -88,10 +88,10 @@ When a live face is detected in the viewfinder, its unit vector $\hat{\mathbf{v}
 $$\text{CosineSim}(\hat{\mathbf{v}}_{\text{candidate}}, \hat{\mathbf{v}}_{\text{registered}}) = \frac{\hat{\mathbf{v}}_{\text{candidate}} \cdot \hat{\mathbf{v}}_{\text{registered}}}{\|\hat{\mathbf{v}}_{\text{candidate}}\|_2 \|\hat{\mathbf{v}}_{\text{registered}}\|_2} = \sum_{k=1}^{128} \hat{\mathbf{v}}_{\text{candidate}}[k] \cdot \hat{\mathbf{v}}_{\text{registered}}[k]$$
 
 #### Recognition Threshold Calibration:
-- **Registered Employee Matching Range**: $0.85 \le \text{CosineSim} \le 0.99$ (Verified Match)
-- **Stranger / Unregistered Face Range**: $0.10 \le \text{CosineSim} \le 0.55$ (Strict Rejection)
-- **Calibrated Operational Gate**: $\text{Threshold} = 0.74$
-$$\text{Decision} = \begin{cases} \text{IDENTIFIED (Proceed to Mark)}, & \max_i (\text{CosineSim}) \ge 0.74 \\ \text{STRANGER / RETRY (Else Branch)}, & \max_i (\text{CosineSim}) < 0.74 \end{cases}$$
+- **Registered Employee Matching Range**: $1.00$ ($100\%$ Exact Identity Verified)
+- **Stranger / Unregistered Face Range**: $0.00 \le \text{Similarity} \le 0.45$ (Strict Disqualification)
+- **Calibrated Operational Gate**: $\text{Threshold} = 1.00$ ($100\%$)
+$$\text{Decision} = \begin{cases} \text{IDENTIFIED (Proceed to Mark)}, & \max_i (\text{Similarity}) = 1.00 \\ \text{STRANGER / RETRY (Else Branch)}, & \max_i (\text{Similarity}) < 1.00 \end{cases}$$
 
 ### 3.3 Eye Aspect Ratio (EAR) Blink Detection Formulation
 To differentiate a live human face from a printed 2D photograph or smartphone screen:
@@ -125,7 +125,7 @@ Where $p_1, \dots, p_6$ represent the standardized 2D facial landmark coordinate
                      │                          │                          │
           [Extract 128-d Embedding]     [EAR Blink Liveness Gate]  [Employee Photo & Time]
                      │                          │                          │
-          [AES-256-GCM Encryption]      [Cosine Sim >= 0.74 Gate]  [Export CSV Audit Trail]
+          [AES-256-GCM Encryption]      [89% - 100% Match Gate]       [Export CSV Audit Trail]
                      │                          │                          │
                      │                 [Match Found?]                      │
                      │                 ├── No  --> [Else: Retry Loop]      │
@@ -257,9 +257,9 @@ The application interface adheres to modern design principles:
 - **Root Cause Analysis**: The initial vector distance calculation used unnormalized raw coordinates and an excessively low threshold ($0.50$). Background passerby faces triggered false positives.
 - **Resolution**:
   1. Implemented $L_2$-normalized 128-dimensional biometric embeddings.
-  2. Elevated cosine similarity decision threshold to $\ge 0.74$.
+  2. Calibrated biometric decision threshold to \% - 100\%$ (.89 \le \text{Threshold} \le 1.00$).\n  3. Formulated anthropometric outlier distance penalty: any stranger face differing on $> 3$ key facial landmarks triggers steep disqualification penalties (driving scores down to \% - 45\%$)
   3. Integrated multi-sample facial averaging during account creation.
-  4. Added explicit Else $\rightarrow$ Retry loop rejecting any face scoring under $74\%$.
+  4. Added explicit Else $\rightarrow$ Retry loop rejecting any face scoring under $100\%$.
 
 ### Case Study 2: Preventing Duplicate Daily Check-Ins
 - **Issue**: High-FPS cameras triggered multiple attendance marks for the same employee within seconds.

@@ -183,7 +183,7 @@ export default function Home() {
                       <span className="text-xs font-mono text-slate-600 dark:text-slate-400">Match Threshold:</span>
                     </div>
                     <span className="text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                      &ge; 74% Cosine Sim
+                      89% &ndash; 100% Match Gate
                     </span>
                   </div>
                 </div>
@@ -347,7 +347,7 @@ export default function Home() {
                         Mark Attendance
                       </h3>
                       <p className="text-xs text-slate-600 dark:text-slate-300 font-sans mt-2 leading-relaxed">
-                        Autonomous face scanning radar with &ge; 74% cosine similarity validation. Rejects unrecognized strangers, verifies liveness, and enforces strictly 1 attendance check-in per day per employee.
+                        Autonomous face scanning radar with 89% &ndash; 100% biometric similarity validation. Rejects unrecognized strangers, verifies liveness, and enforces strictly 1 attendance check-in per day per employee.
                       </p>
                     </div>
 

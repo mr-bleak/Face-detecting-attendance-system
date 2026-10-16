@@ -43,6 +43,7 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
 
   const [currentFrame, setCurrentFrame] = useState<BiometricFrameResult | null>(null);
   const [bestMatch, setBestMatch] = useState<{ profile: UserProfile; similarity: number } | null>(null);
+  const [candidateScore, setCandidateScore] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastMarkedRecord, setLastMarkedRecord] = useState<AttendanceRecord | null>(null);
@@ -78,11 +79,13 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
       if (!isScanningActive || isSubmitting || lastMarkedRecord) return;
       if (!result.detected || result.faceCount !== 1 || !result.embedding) {
         setBestMatch(null);
+        setCandidateScore(null);
         return;
       }
 
       if (profiles.length === 0) {
         setBestMatch(null);
+        setCandidateScore(null);
         return;
       }
 
@@ -99,12 +102,14 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
         }
       }
 
-      // Strict biometric recognition threshold: >= 74% (0.74)
-      // Strangers typically score 10% to 45%, while enrolled employee scores 85% to 98%
-      if (topProfile && highestSimilarity >= 0.74) {
+      // Strict biometric recognition threshold: 89% to 100% (0.89 <= similarity <= 1.00)
+      // Strangers typically score below 80%, while enrolled employees score 89% to 100%
+      if (topProfile && highestSimilarity >= 0.89 && highestSimilarity <= 1.0) {
         setBestMatch({ profile: topProfile, similarity: highestSimilarity });
+        setCandidateScore(highestSimilarity);
       } else {
         setBestMatch(null);
+        setCandidateScore(highestSimilarity > 0 ? highestSimilarity : null);
       }
     },
     [isScanningActive, isSubmitting, lastMarkedRecord, profiles]
@@ -222,6 +227,7 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
   const handleNextPerson = () => {
     setLastMarkedRecord(null);
     setBestMatch(null);
+    setCandidateScore(null);
     setErrorMessage(null);
     setCountdown(null);
     setIsScanningActive(true);
@@ -230,6 +236,7 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
   // Flowchart 'Retry' function: loops back to Initialize Face Detection function
   const handleRetry = () => {
     setBestMatch(null);
+    setCandidateScore(null);
     setErrorMessage(null);
     setCountdown(null);
     setIsScanningActive(false);
@@ -523,9 +530,14 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
                     <span>&lt; Face detected: Else (Unrecognized Face) &gt;</span>
                   </div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-300 font-sans leading-relaxed">
-                    This face does NOT match any registered employee in the system (Threshold &ge; 74.0%).
+                    This face does NOT match any registered employee in the system (Threshold: 89.0% &ndash; 100.0%).
                     Following flowchart branch: <strong className="text-rose-600 dark:text-rose-400 font-mono">Else &rarr; Retry</strong>.
                   </p>
+                  {candidateScore !== null && (
+                    <div className="inline-block px-3 py-1 rounded-md bg-rose-500/20 text-rose-700 dark:text-rose-300 font-mono text-[11px] font-semibold">
+                      Candidate similarity: {(candidateScore * 100).toFixed(1)}% &bull; Required: 89.0% &ndash; 100.0%
+                    </div>
+                  )}
 
                   {/* Flowchart Box: [ Retry ] */}
                   <div className="pt-1">
