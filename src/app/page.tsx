@@ -162,7 +162,7 @@ export default function Home() {
                     <span>OPERATIONAL HUB</span>
                   </h1>
                   <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-sans leading-relaxed">
-                    Zero-server-latency face verification platform powered by MediaPipe WebAssembly. Operates strictly inside the client runtime with automated anti-spoofing and single-check-in daily protection.
+                    Zero-server-latency face verification platform powered by Omnnixx 128D Neural Biometric Engine &amp; ONNX WebAssembly. Operates smoothly on mobile &amp; desktop with real-time anti-spoofing and single-check-in daily protection.
                   </p>
                 </div>
 
@@ -183,7 +183,7 @@ export default function Home() {
                       <span className="text-xs font-mono text-slate-600 dark:text-slate-400">Match Threshold:</span>
                     </div>
                     <span className="text-xs font-mono font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 px-2 py-0.5 rounded border border-cyan-500/20">
-                      89% &ndash; 100% Match Gate
+                      75% Balanced (Omnnixx 128D)
                     </span>
                   </div>
                 </div>
@@ -347,7 +347,7 @@ export default function Home() {
                         Mark Attendance
                       </h3>
                       <p className="text-xs text-slate-600 dark:text-slate-300 font-sans mt-2 leading-relaxed">
-                        Autonomous face scanning radar with 89% &ndash; 100% biometric similarity validation. Rejects unrecognized strangers, verifies liveness, and enforces strictly 1 attendance check-in per day per employee.
+                        Autonomous face scanning radar with calibrated 75% &ndash; 100% Omnnixx 128D biometric similarity validation. Rejects unrecognized strangers, verifies liveness, and enforces strictly 1 attendance check-in per day per employee.
                       </p>
                     </div>
 

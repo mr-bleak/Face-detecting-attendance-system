@@ -18,10 +18,20 @@ import {
   Database,
   Check,
   Lock,
+  Sliders,
+  Cpu,
+  Zap,
+  Settings2,
 } from 'lucide-react';
 import { CameraViewfinder } from './CameraViewfinder';
 import { BiometricFrameResult, UserProfile, AttendanceRecord } from '@/lib/types';
-import { computeCosineSimilarity } from '@/lib/faceEngine';
+import {
+  computeCosineSimilarity,
+  OMNNIXX_THRESHOLDS,
+  getStoredThreshold,
+  setStoredThreshold,
+  DEFAULT_SIMILARITY_THRESHOLD,
+} from '@/lib/faceEngine';
 import { createAttendanceToken, verifyAndMarkAttendance } from '@/app/actions';
 import { playSuccessChime, playWarningTone } from '@/lib/audio';
 import confetti from 'canvas-confetti';
@@ -40,6 +50,18 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
   onAttendanceMarked,
 }) => {
   const [isScanningActive, setIsScanningActive] = useState(true);
+
+  // Omnnixx Dynamic Threshold Calibration (Defaults to 75% Balanced Mobile)
+  const [threshold, setThreshold] = useState<number>(() => {
+    if (typeof window !== 'undefined') return getStoredThreshold();
+    return DEFAULT_SIMILARITY_THRESHOLD;
+  });
+  const [showThresholdConfig, setShowThresholdConfig] = useState(false);
+
+  const handleThresholdChange = (val: number) => {
+    setThreshold(val);
+    setStoredThreshold(val);
+  };
 
   const [currentFrame, setCurrentFrame] = useState<BiometricFrameResult | null>(null);
   const [bestMatch, setBestMatch] = useState<{ profile: UserProfile; similarity: number } | null>(null);
@@ -102,9 +124,9 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
         }
       }
 
-      // Strict biometric recognition threshold: 89% to 100% (0.89 <= similarity <= 1.00)
-      // Strangers typically score below 80%, while enrolled employees score 89% to 100%
-      if (topProfile && highestSimilarity >= 0.89 && highestSimilarity <= 1.0) {
+      // Omnnixx 128D calibrated recognition threshold (defaults to 75%, user adjustable)
+      // Strangers typically score below 50%, while enrolled employees score 76% to 99%
+      if (topProfile && highestSimilarity >= threshold && highestSimilarity <= 1.0) {
         setBestMatch({ profile: topProfile, similarity: highestSimilarity });
         setCandidateScore(highestSimilarity);
       } else {
@@ -112,7 +134,7 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
         setCandidateScore(highestSimilarity > 0 ? highestSimilarity : null);
       }
     },
-    [isScanningActive, isSubmitting, lastMarkedRecord, profiles]
+    [isScanningActive, isSubmitting, lastMarkedRecord, profiles, threshold]
   );
 
   const triggerMarkAttendance = async (profile: UserProfile, similarity: number) => {
@@ -385,6 +407,164 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
 
           {/* Right Column: Flowchart Decision Loop < Face detected > */}
           <div className="lg:col-span-5 xl:col-span-5 space-y-4">
+            {/* Omnnixx 128D Sensitivity & Threshold Calibration Hub */}
+            <div className="bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl dark:shadow-2xl backdrop-blur-md transition-colors space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 dark:text-cyan-400">
+                    <Cpu className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-mono font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>Omnnixx 128D Engine</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 font-normal">
+                        ONNX Mobile
+                      </span>
+                    </h3>
+                    <p className="text-[10px] text-slate-500 font-sans">
+                      Biometric threshold calibration &amp; sensitivity
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setShowThresholdConfig(!showThresholdConfig)}
+                  className={`p-1.5 rounded-xl border text-xs font-mono transition-all flex items-center gap-1 cursor-pointer ${
+                    showThresholdConfig
+                      ? 'bg-cyan-500/20 border-cyan-500/40 text-cyan-700 dark:text-cyan-300'
+                      : 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+                  }`}
+                  title="Configure Threshold"
+                >
+                  <Sliders className="w-3.5 h-3.5" />
+                  <span className="text-[11px] font-bold">{(threshold * 100).toFixed(0)}% Gate</span>
+                </button>
+              </div>
+
+              {/* Three Quick Sensitivity Presets */}
+              <div className="grid grid-cols-3 gap-1.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleThresholdChange(OMNNIXX_THRESHOLDS.LENIENT)}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-mono transition-all cursor-pointer flex flex-col items-center justify-center border ${
+                    Math.abs(threshold - OMNNIXX_THRESHOLDS.LENIENT) < 0.01
+                      ? 'bg-amber-500/15 border-amber-500 text-amber-700 dark:text-amber-300 font-bold shadow-xs'
+                      : 'bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <span className="flex items-center gap-1">
+                    <Zap className="w-3 h-3 text-amber-500" />
+                    <span>Lenient</span>
+                  </span>
+                  <span className="text-[9px] text-slate-500">68% Low-Light</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleThresholdChange(OMNNIXX_THRESHOLDS.BALANCED)}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-mono transition-all cursor-pointer flex flex-col items-center justify-center border ${
+                    Math.abs(threshold - OMNNIXX_THRESHOLDS.BALANCED) < 0.01
+                      ? 'bg-emerald-500/15 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-bold shadow-xs ring-1 ring-emerald-500/30'
+                      : 'bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    <span>Balanced</span>
+                  </span>
+                  <span className="text-[9px] text-slate-500">75% (Default)</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleThresholdChange(OMNNIXX_THRESHOLDS.STRICT)}
+                  className={`py-1.5 px-2 rounded-xl text-[11px] font-mono transition-all cursor-pointer flex flex-col items-center justify-center border ${
+                    Math.abs(threshold - OMNNIXX_THRESHOLDS.STRICT) < 0.01
+                      ? 'bg-purple-500/15 border-purple-500 text-purple-700 dark:text-purple-300 font-bold shadow-xs'
+                      : 'bg-slate-50 dark:bg-slate-950/50 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <span className="flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-purple-500" />
+                    <span>Strict</span>
+                  </span>
+                  <span className="text-[9px] text-slate-500">85% High Sec</span>
+                </button>
+              </div>
+
+              {/* Expandable Custom Threshold Slider */}
+              {showThresholdConfig && (
+                <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 text-xs font-mono space-y-2 animate-in fade-in duration-150">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-slate-600 dark:text-slate-400">Custom Match Gate:</span>
+                    <span className="font-bold text-cyan-600 dark:text-cyan-400">
+                      {(threshold * 100).toFixed(0)}% Similarity
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0.60"
+                    max="0.92"
+                    step="0.01"
+                    value={threshold}
+                    onChange={(e) => handleThresholdChange(parseFloat(e.target.value))}
+                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                  />
+                  <div className="flex justify-between text-[9px] text-slate-500">
+                    <span>60% (High Tolerance)</span>
+                    <span>75% (Optimal)</span>
+                    <span>92% (Strict)</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Real-time Match Telemetry Meter */}
+              {currentFrame?.detected && (
+                <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 text-xs font-mono space-y-1.5">
+                  <div className="flex justify-between items-center text-[11px]">
+                    <span className="text-slate-500 flex items-center gap-1">
+                      <ScanFace className="w-3 h-3 text-cyan-500" />
+                      <span>Live Candidate Score:</span>
+                    </span>
+                    <span
+                      className={`font-bold ${
+                        candidateScore !== null && candidateScore >= threshold
+                          ? 'text-emerald-600 dark:text-emerald-400'
+                          : 'text-amber-600 dark:text-amber-400'
+                      }`}
+                    >
+                      {candidateScore !== null ? `${(candidateScore * 100).toFixed(1)}%` : 'Evaluating...'}
+                      {candidateScore !== null && (
+                        <span className="text-[10px] text-slate-400 font-normal ml-1">
+                          (Gate: {(threshold * 100).toFixed(0)}%)
+                        </span>
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Visual Meter Bar */}
+                  <div className="relative w-full h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-150 ${
+                        candidateScore !== null && candidateScore >= threshold
+                          ? 'bg-gradient-to-r from-emerald-500 to-cyan-400'
+                          : 'bg-gradient-to-r from-rose-500 to-amber-400'
+                      }`}
+                      style={{
+                        width: `${Math.min(100, Math.max(0, ((candidateScore || 0) * 100)))}%`,
+                      }}
+                    />
+                    {/* Threshold marker tick */}
+                    <div
+                      className="absolute top-0 bottom-0 w-0.5 bg-white shadow-xs"
+                      style={{ left: `${threshold * 100}%` }}
+                      title={`Threshold Gate: ${(threshold * 100).toFixed(0)}%`}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Flowchart Decision Card */}
             <div className="bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 sm:p-5 shadow-xl dark:shadow-2xl backdrop-blur-md transition-colors">
               <div className="flex items-center justify-between mb-3 border-b border-slate-200 dark:border-slate-800 pb-2.5">
@@ -530,12 +710,25 @@ export const MarkAttendanceView: React.FC<MarkAttendanceViewProps> = ({
                     <span>&lt; Face detected: Else (Unrecognized Face) &gt;</span>
                   </div>
                   <p className="text-[11px] text-slate-600 dark:text-slate-300 font-sans leading-relaxed">
-                    This face does NOT match any registered employee in the system (Threshold: 89.0% &ndash; 100.0%).
+                    This face does not match any registered employee (Candidate: {(candidateScore !== null ? (candidateScore * 100).toFixed(1) : '0.0')}% &bull; Required: &ge; {(threshold * 100).toFixed(1)}%).
                     Following flowchart branch: <strong className="text-rose-600 dark:text-rose-400 font-mono">Else &rarr; Retry</strong>.
                   </p>
                   {candidateScore !== null && (
                     <div className="inline-block px-3 py-1 rounded-md bg-rose-500/20 text-rose-700 dark:text-rose-300 font-mono text-[11px] font-semibold">
-                      Candidate similarity: {(candidateScore * 100).toFixed(1)}% &bull; Required: 89.0% &ndash; 100.0%
+                      Candidate similarity: {(candidateScore * 100).toFixed(1)}% &bull; Required Gate: &ge; {(threshold * 100).toFixed(1)}%
+                    </div>
+                  )}
+
+                  {/* Suggestion if close to threshold */}
+                  {candidateScore !== null && candidateScore >= 0.60 && candidateScore < threshold && (
+                    <div className="pt-1">
+                      <button
+                        onClick={() => handleThresholdChange(OMNNIXX_THRESHOLDS.LENIENT)}
+                        className="text-[10px] text-amber-700 dark:text-amber-300 hover:underline cursor-pointer flex items-center justify-center gap-1 mx-auto"
+                      >
+                        <Zap className="w-3 h-3 text-amber-500" />
+                        <span>Dim lighting? Click to switch to Lenient ({OMNNIXX_THRESHOLDS.LENIENT * 100}%)</span>
+                      </button>
                     </div>
                   )}
 

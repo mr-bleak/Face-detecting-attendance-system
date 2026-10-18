@@ -10,16 +10,16 @@ interface CameraViewfinderProps {
   onFrameResult: (result: BiometricFrameResult, videoEl: HTMLVideoElement) => void;
   overlayTitle?: string;
   isScanning?: boolean;
-  throttleMs?: number; // Default 150-200ms throttle to save battery on Android
+  throttleMs?: number; // Tuned for smooth mobile edge inference (130-160ms)
   className?: string;
   aspectRatioClass?: string;
 }
 
 export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({
   onFrameResult,
-  overlayTitle = 'Biometric Vision Feed',
+  overlayTitle = 'Omnnixx 128D AI Vision',
   isScanning = true,
-  throttleMs = 160,
+  throttleMs = 140,
   className,
   aspectRatioClass,
 }) => {
@@ -37,6 +37,8 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({
   const frameCountRef = useRef<number>(0);
   const lastFpsTimeRef = useRef<number>(performance.now());
   const hasLockedBeepedRef = useRef<boolean>(false);
+  // Smooth interpolated bounding box for silky 60 FPS mobile rendering
+  const lerpBoxRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Initialize camera stream
   const startCamera = useCallback(async () => {
@@ -154,9 +156,20 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({
           ctx.stroke();
           ctx.restore();
 
-          // Draw target bounding box and landmarks if detected
+          // Smoothly interpolate bounding box towards target for buttery 60 FPS mobile tracking
           if (currentResult?.detected && currentResult.box) {
-            const b = currentResult.box;
+            const target = currentResult.box;
+            if (!lerpBoxRef.current) {
+              lerpBoxRef.current = { ...target };
+            } else {
+              // Exponential smoothing factor (0.35 gives fluid gliding without trailing lag)
+              lerpBoxRef.current.x += (target.x - lerpBoxRef.current.x) * 0.35;
+              lerpBoxRef.current.y += (target.y - lerpBoxRef.current.y) * 0.35;
+              lerpBoxRef.current.width += (target.width - lerpBoxRef.current.width) * 0.35;
+              lerpBoxRef.current.height += (target.height - lerpBoxRef.current.height) * 0.35;
+            }
+
+            const b = lerpBoxRef.current;
             const bx = b.x * canvas.width;
             const by = b.y * canvas.height;
             const bw = b.width * canvas.width;
@@ -174,7 +187,7 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({
             ctx.shadowBlur = 10;
 
             // Reticle corner brackets
-            const cornerSize = Math.min(bw, bh) * 0.2;
+            const cornerSize = Math.min(bw, bh) * 0.22;
             // Top-Left
             ctx.beginPath();
             ctx.moveTo(bx, by + cornerSize);
@@ -203,30 +216,32 @@ export const CameraViewfinder: React.FC<CameraViewfinderProps> = ({
             ctx.lineTo(bx + bw, by + bh - cornerSize);
             ctx.stroke();
 
-            // Subtle scan radar line
-            const scanY = by + (Math.sin(now / 200) * 0.5 + 0.5) * bh;
+            // Smooth scan radar sweep
+            const scanY = by + (Math.sin(now / 220) * 0.5 + 0.5) * bh;
             ctx.beginPath();
             ctx.moveTo(bx, scanY);
             ctx.lineTo(bx + bw, scanY);
-            ctx.strokeStyle = isOptimal ? 'rgba(16, 185, 129, 0.7)' : 'rgba(56, 189, 248, 0.7)';
+            ctx.strokeStyle = isOptimal ? 'rgba(16, 185, 129, 0.75)' : 'rgba(56, 189, 248, 0.75)';
             ctx.lineWidth = 1.5;
             ctx.stroke();
 
             // Draw primary facial landmarks (eyes, nose, mouth points)
             if (currentResult.landmarks) {
-              ctx.fillStyle = isOptimal ? 'rgba(52, 211, 153, 0.8)' : 'rgba(56, 189, 248, 0.8)';
+              ctx.fillStyle = isOptimal ? 'rgba(52, 211, 153, 0.85)' : 'rgba(56, 189, 248, 0.85)';
               const keyIndices = [33, 133, 362, 263, 1, 61, 291, 152, 10];
               for (const idx of keyIndices) {
                 const pt = currentResult.landmarks[idx];
                 if (pt) {
                   ctx.beginPath();
-                  ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 3, 0, 2 * Math.PI);
+                  ctx.arc(pt.x * canvas.width, pt.y * canvas.height, 2.5, 0, 2 * Math.PI);
                   ctx.fill();
                 }
               }
             }
 
             ctx.restore();
+          } else {
+            lerpBoxRef.current = null;
           }
         }
       }
